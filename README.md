@@ -1,4 +1,4 @@
-# Sistema de Gestão para Templo Umbandista
+# Sistema de Gestão
 
 Uma aplicação web completa para gerenciar as atividades de um templo umbandista, incluindo controle financeiro, gestão de materiais religiosos e cadastro de membros.
 
@@ -13,8 +13,8 @@ Uma aplicação web completa para gerenciar as atividades de um templo umbandist
 ### 💰 Módulo Financeiro
 - Controle de receitas e despesas
 - Categorias específicas para templo umbandista:
-  - **Receitas**: Mensalidades, Doações, Trabalhos Espirituais, Eventos, Vendas
-  - **Despesas**: Materiais Religiosos, Manutenção do Templo, Utilidades, Alimentação, Outros
+  - **Receitas**: Mensalidades, Doações, Eventos, Vendas
+  - **Despesas**: Materiais, Manutenção, Utilidades, Alimentação, Outros
 - Histórico completo de movimentações
 - Relatórios de saldo atual
 
@@ -27,13 +27,6 @@ Uma aplicação web completa para gerenciar as atividades de um templo umbandist
 
 ### 📦 Controle de Materiais
 - Gestão de estoque de materiais religiosos
-- Categorias específicas:
-  - **Velas**: Brancas, Coloridas, Especiais
-  - **Incensos**: Diversos aromas e tipos
-  - **Ervas**: Para banhos e defumações
-  - **Bebidas**: Para oferendas
-  - **Flores**: Para decoração e oferendas
-  - **Outros**: Materiais diversos
 - Controle de entrada, saída e ajustes
 - Alertas de estoque baixo
 - Histórico de movimentações
@@ -130,13 +123,12 @@ O sistema já vem com categorias específicas para templos umbandistas:
 **Receitas:**
 - Mensalidades
 - Doações
-- Trabalhos Espirituais
 - Eventos e Festivais
 - Vendas de Materiais
 
 **Despesas:**
-- Materiais Religiosos
-- Manutenção do Templo
+- Materiais 
+- Manutenção
 - Contas (Luz, Água, etc.)
 - Alimentação para Eventos
 - Outros
