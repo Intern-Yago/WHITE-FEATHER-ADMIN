@@ -1,0 +1,7 @@
+[project]
+name = "WHITE-FEATHER-ADMIN"
+mode = "code"
+
+[optimization]
+aggressive = true
+discard_types = ["logs", "comments", "markdown"]

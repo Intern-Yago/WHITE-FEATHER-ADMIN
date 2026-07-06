@@ -1,3 +1,4 @@
+import { apiFetch, isAdmin } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,9 +8,97 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Users, DollarSign, AlertTriangle, Trash2, Edit, CreditCard } from 'lucide-react'
+import { Plus, Users, DollarSign, AlertTriangle, Trash2, Edit, CreditCard, Phone } from 'lucide-react'
 
-export function Membros() {
+// Diretório somente-leitura para membros comuns: apenas nome e telefone.
+function MembrosMembro() {
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+
+  useEffect(() => {
+    const fetchMembros = async () => {
+      try {
+        const response = await apiFetch('/membros')
+        const data = await response.json()
+        setMembros(data)
+      } catch (error) {
+        console.error('Erro ao carregar membros:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchMembros()
+  }, [])
+
+  const filtrados = membros.filter(m =>
+    m.nome.toLowerCase().includes(busca.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Membros do Templo</h1>
+        <div className="animate-pulse space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-muted rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Membros do Templo</h1>
+        <p className="text-muted-foreground">Lista de membros e contatos</p>
+      </div>
+
+      <Input
+        placeholder="Buscar por nome..."
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        className="max-w-sm"
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Membros</CardTitle>
+          <CardDescription>Todos os membros ativos do templo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filtrados.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum membro encontrado.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtrados.map((membro) => (
+                <div key={membro.id} className="flex items-center justify-between gap-4 p-4 border rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-muted rounded-full shrink-0">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-medium truncate">{membro.nome}</h3>
+                  </div>
+                  {membro.telefone && (
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground shrink-0">
+                      <Phone className="h-3.5 w-3.5" />
+                      {membro.telefone}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function MembrosAdmin() {
   const [membros, setMembros] = useState([])
   const [pagamentos, setPagamentos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,7 +129,7 @@ export function Membros() {
 
   const fetchMembros = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/membros')
+      const response = await apiFetch('/membros')
       const data = await response.json()
       setMembros(data)
     } catch (error) {
@@ -52,7 +141,7 @@ export function Membros() {
 
   const fetchPagamentos = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/pagamentos-mensalidade')
+      const response = await apiFetch('/pagamentos-mensalidade')
       const data = await response.json()
       setPagamentos(data)
     } catch (error) {
@@ -65,12 +154,12 @@ export function Membros() {
     
     try {
       const url = editingMembro 
-        ? `http://localhost:5000/api/membros/${editingMembro.id}`
-        : 'http://localhost:5000/api/membros'
+        ? `/membros/${editingMembro.id}`
+        : '/membros'
       
       const method = editingMembro ? 'PUT' : 'POST'
       
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +188,7 @@ export function Membros() {
     e.preventDefault()
     
     try {
-      const response = await fetch('http://localhost:5000/api/pagamentos-mensalidade', {
+      const response = await apiFetch('/pagamentos-mensalidade', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +232,7 @@ export function Membros() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este membro?')) {
       try {
-        await fetch(`http://localhost:5000/api/membros/${id}`, { method: 'DELETE' })
+        await apiFetch(`/membros/${id}`, { method: 'DELETE' })
         await fetchMembros()
       } catch (error) {
         console.error('Erro ao remover membro:', error)
@@ -154,7 +243,7 @@ export function Membros() {
   const handleDeletePagamento = async (id) => {
     if (confirm('Tem certeza que deseja excluir este pagamento?')) {
       try {
-        await fetch(`http://localhost:5000/api/pagamentos-mensalidade/${id}`, { method: 'DELETE' })
+        await apiFetch(`/pagamentos-mensalidade/${id}`, { method: 'DELETE' })
         await fetchPagamentos()
       } catch (error) {
         console.error('Erro ao excluir pagamento:', error)
@@ -185,7 +274,7 @@ export function Membros() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Membros do Templo</h1>
           <p className="text-muted-foreground">
@@ -193,7 +282,7 @@ export function Membros() {
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Dialog open={pagamentoDialogOpen} onOpenChange={setPagamentoDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -445,7 +534,7 @@ export function Membros() {
               ) : (
                 <div className="space-y-4">
                   {membros.map((membro) => (
-                    <div key={membro.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={membro.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{membro.nome}</h3>
@@ -466,7 +555,7 @@ export function Membros() {
                           </p>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2 justify-end w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
                         <Button
                           variant="outline"
                           size="icon"
@@ -506,7 +595,7 @@ export function Membros() {
               ) : (
                 <div className="space-y-4">
                   {pagamentos.map((pagamento) => (
-                    <div key={pagamento.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={pagamento.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{pagamento.membro_nome}</h3>
@@ -519,7 +608,7 @@ export function Membros() {
                           {pagamento.observacoes && ` • ${pagamento.observacoes}`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
                         <span className="font-bold text-green-600">
                           R$ {pagamento.valor_pago.toFixed(2)}
                         </span>
@@ -541,5 +630,9 @@ export function Membros() {
       </Tabs>
     </div>
   )
+}
+
+export function Membros() {
+  return isAdmin() ? <MembrosAdmin /> : <MembrosMembro />
 }
 

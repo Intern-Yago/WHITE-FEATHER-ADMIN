@@ -1,16 +1,22 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { getUser, clearSession } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { 
-  DollarSign, 
-  Package, 
-  Home, 
+import {
+  DollarSign,
+  Package,
+  Home,
   Menu,
   X,
-  Users
+  Users,
+  Calendar,
+  LogOut,
+  Wallet,
+  User as UserIcon
 } from 'lucide-react'
 
+// `adminOnly`: visível só para admin. `memberOnly`: visível só para membro comum.
 const menuItems = [
   {
     title: 'Dashboard',
@@ -20,7 +26,14 @@ const menuItems = [
   {
     title: 'Financeiro',
     href: '/financeiro',
-    icon: DollarSign
+    icon: DollarSign,
+    adminOnly: true
+  },
+  {
+    title: 'Minhas Mensalidades',
+    href: '/minhas-mensalidades',
+    icon: Wallet,
+    memberOnly: true
   },
   {
     title: 'Materiais',
@@ -31,12 +44,42 @@ const menuItems = [
     title: 'Membros',
     href: '/membros',
     icon: Users
+  },
+  {
+    title: 'Agenda',
+    href: '/agenda',
+    icon: Calendar
   }
 ]
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState(null)
   const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const loadUser = () => {
+      setUser(getUser())
+    }
+
+    loadUser()
+    window.addEventListener('auth-change', loadUser)
+    return () => window.removeEventListener('auth-change', loadUser)
+  }, [])
+
+  const handleLogout = () => {
+    clearSession()
+    navigate('/login')
+  }
+
+  // Filtrar itens com base no papel do usuário.
+  const isAdmin = user?.role === 'admin'
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.adminOnly && !isAdmin) return false
+    if (item.memberOnly && isAdmin) return false
+    return true
+  })
 
   return (
     <>
@@ -77,7 +120,7 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <ul className="space-y-2">
-              {menuItems.map((item) => {
+              {filteredMenuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = location.pathname === item.href
                 
@@ -102,9 +145,38 @@ export function Sidebar() {
             </ul>
           </nav>
 
+          {/* User profile and logout area at the bottom */}
+          {user && (
+            <div className="p-4 border-t border-sidebar-border space-y-3">
+              <div className="flex items-center gap-2.5 px-2">
+                <div className="p-1.5 bg-sidebar-accent rounded-full text-sidebar-accent-foreground">
+                  <UserIcon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs font-semibold truncate text-sidebar-foreground">
+                    {user.username}
+                  </p>
+                  <p className="text-[10px] text-sidebar-foreground/50 uppercase font-black">
+                    {user.role === 'admin' ? 'Administrador' : 'Membro'}
+                  </p>
+                </div>
+              </div>
+              
+              <Button 
+                variant="ghost" 
+                onClick={handleLogout}
+                className="w-full justify-start text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                size="sm"
+              >
+                <LogOut className="h-3.5 w-3.5 mr-2" />
+                Sair da Conta
+              </Button>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="p-4 border-t border-sidebar-border">
-            <p className="text-xs text-sidebar-foreground/60">
+            <p className="text-[10px] text-sidebar-foreground/40 text-center">
               Sistema de Gestão v1.0
             </p>
           </div>
@@ -113,4 +185,3 @@ export function Sidebar() {
     </>
   )
 }
-

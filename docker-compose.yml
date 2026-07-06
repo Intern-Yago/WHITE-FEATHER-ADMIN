@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: white_feather_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-white_feather}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - FLASK_ENV=development
+      # debug=True permite RCE se exposto; mantenha desligado (defina FLASK_DEBUG=1 só localmente)
+      - FLASK_DEBUG=${FLASK_DEBUG:-0}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-white_feather}
+      # Chaves de assinatura — DEFINA valores fortes em produção (via arquivo .env)
+      - SECRET_KEY=${SECRET_KEY:-dev-only-change-me}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-only-change-me}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      # Senhas do seed inicial (troque em produção)
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-usuario123}
+    depends_on:
+      - db
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  pgdata:

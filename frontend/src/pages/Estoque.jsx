@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,7 +33,7 @@ export function Estoque() {
 
   const fetchProdutos = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/produtos')
+      const response = await apiFetch('/produtos')
       const data = await response.json()
       setProdutos(data)
     } catch (error) {
@@ -47,12 +48,12 @@ export function Estoque() {
     
     try {
       const url = editingProduto 
-        ? `http://localhost:5000/api/produtos/${editingProduto.id}`
-        : 'http://localhost:5000/api/produtos'
+        ? `/produtos/${editingProduto.id}`
+        : '/produtos'
       
       const method = editingProduto ? 'PUT' : 'POST'
       
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ export function Estoque() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
       try {
-        await fetch(`http://localhost:5000/api/produtos/${id}`, { method: 'DELETE' })
+        await apiFetch(`/produtos/${id}`, { method: 'DELETE' })
         await fetchProdutos()
       } catch (error) {
         console.error('Erro ao excluir produto:', error)
@@ -107,7 +108,7 @@ export function Estoque() {
     e.preventDefault()
     
     try {
-      const response = await fetch(`http://localhost:5000/api/produtos/${ajustandoProduto.id}/ajustar-estoque`, {
+      const response = await apiFetch(`/produtos/${ajustandoProduto.id}/ajustar-estoque`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

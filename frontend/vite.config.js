@@ -11,4 +11,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    watch: {
+      usePolling: true,
+    },
+    host: true, // Garante que responda em 0.0.0.0 dentro do container
+    port: 5173,
+  },
 })

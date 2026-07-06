@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,7 +30,7 @@ export function Financeiro() {
 
   const fetchTransacoes = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/transacoes')
+      const response = await apiFetch('/transacoes')
       const data = await response.json()
       setTransacoes(data)
     } catch (error) {
@@ -41,7 +42,7 @@ export function Financeiro() {
 
   const fetchCategorias = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/categorias')
+      const response = await apiFetch('/categorias')
       const data = await response.json()
       setCategorias(data)
     } catch (error) {
@@ -54,12 +55,12 @@ export function Financeiro() {
     
     try {
       const url = editingTransacao 
-        ? `http://localhost:5000/api/transacoes/${editingTransacao.id}`
-        : 'http://localhost:5000/api/transacoes'
+        ? `/transacoes/${editingTransacao.id}`
+        : '/transacoes'
       
       const method = editingTransacao ? 'PUT' : 'POST'
       
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export function Financeiro() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja excluir esta transação?')) {
       try {
-        await fetch(`http://localhost:5000/api/transacoes/${id}`, { method: 'DELETE' })
+        await apiFetch(`/transacoes/${id}`, { method: 'DELETE' })
         await fetchTransacoes()
       } catch (error) {
         console.error('Erro ao excluir transação:', error)
@@ -132,7 +133,7 @@ export function Financeiro() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Controle Financeiro</h1>
           <p className="text-muted-foreground">
@@ -297,7 +298,7 @@ export function Financeiro() {
           ) : (
             <div className="space-y-4">
               {transacoes.map((transacao) => (
-                <div key={transacao.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={transacao.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium">{transacao.descricao}</h3>
@@ -313,7 +314,7 @@ export function Financeiro() {
                       {new Date(transacao.data).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
                     <span className={`font-bold ${
                       transacao.tipo === 'receita' ? 'text-green-600' : 'text-red-600'
                     }`}>

@@ -1,3 +1,4 @@
+import { apiFetch, isAdmin } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Package, AlertTriangle, DollarSign, Trash2, Edit, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 export function Materiais() {
+  // Membro comum pode ver e movimentar estoque, mas não criar/editar/excluir.
+  const admin = isAdmin()
   const [materiais, setMateriais] = useState([])
   const [movimentacoes, setMovimentacoes] = useState([])
   const [categorias, setCategorias] = useState({ categorias: [], subcategorias: {} })
@@ -47,7 +50,7 @@ export function Materiais() {
 
   const fetchMateriais = async () => {
     try {
-      const response = await fetch('http://192.168.18.150:5000/api/materiais')
+      const response = await apiFetch('/materiais')
       const data = await response.json()
       setMateriais(data)
     } catch (error) {
@@ -59,7 +62,7 @@ export function Materiais() {
 
   const fetchMovimentacoes = async () => {
     try {
-      const response = await fetch('http://192.168.18.150:5000/api/movimentacoes')
+      const response = await apiFetch('/movimentacoes')
       const data = await response.json()
       setMovimentacoes(data)
     } catch (error) {
@@ -69,7 +72,7 @@ export function Materiais() {
 
   const fetchCategorias = async () => {
     try {
-      const response = await fetch('http://192.168.18.150:5000/api/categorias-materiais')
+      const response = await apiFetch('/categorias-materiais')
       const data = await response.json()
       setCategorias(data)
     } catch (error) {
@@ -82,12 +85,12 @@ export function Materiais() {
     
     try {
       const url = editingMaterial 
-        ? `http://192.168.18.150:5000/api/materiais/${editingMaterial.id}`
-        : 'http://192.168.18.150:5000/api/materiais'
+        ? `/materiais/${editingMaterial.id}`
+        : '/materiais'
       
       const method = editingMaterial ? 'PUT' : 'POST'
       
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +123,7 @@ export function Materiais() {
     e.preventDefault()
     
     try {
-      const response = await fetch(`http://192.168.18.150:5000/api/materiais/${materialMovimentacao.id}/movimentar`, {
+      const response = await apiFetch(`/materiais/${materialMovimentacao.id}/movimentar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +172,7 @@ export function Materiais() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este material?')) {
       try {
-        await fetch(`http://192.168.18.150:5000/api/materiais/${id}`, { method: 'DELETE' })
+        await apiFetch(`/materiais/${id}`, { method: 'DELETE' })
         await fetchMateriais()
       } catch (error) {
         console.error('Erro ao remover material:', error)
@@ -207,7 +210,7 @@ export function Materiais() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Materiais Religiosos</h1>
           <p className="text-muted-foreground">
@@ -215,6 +218,7 @@ export function Materiais() {
           </p>
         </div>
         
+        {admin && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => {
@@ -391,6 +395,7 @@ export function Materiais() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -456,7 +461,7 @@ export function Materiais() {
               ) : (
                 <div className="space-y-4">
                   {materiais.map((material) => (
-                    <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={material.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{material.nome}</h3>
@@ -479,7 +484,7 @@ export function Materiais() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-row items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
                         <div className="text-right">
                           <div className="font-bold">R$ {material.valor_total.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">
@@ -500,20 +505,24 @@ export function Materiais() {
                           >
                             <ArrowUpDown className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(material)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleDelete(material.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {admin && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleEdit(material)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleDelete(material.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -540,8 +549,8 @@ export function Materiais() {
               ) : (
                 <div className="space-y-4">
                   {movimentacoes.map((mov) => (
-                    <div key={mov.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
+                    <div key={mov.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
                         {getMovimentacaoIcon(mov.tipo_movimentacao)}
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -559,7 +568,7 @@ export function Materiais() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto">
                         <span className={`font-bold ${
                           mov.tipo_movimentacao === 'entrada' ? 'text-green-600' :
                           mov.tipo_movimentacao === 'saida' ? 'text-red-600' : 'text-blue-600'

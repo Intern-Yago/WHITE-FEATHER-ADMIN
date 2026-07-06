@@ -1,6 +1,14 @@
+import { useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 
 export function Layout({ children }) {
+  const location = useLocation()
+  const isLoginPage = location.pathname === '/login'
+
+  if (isLoginPage) {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -16,4 +24,3 @@ export function Layout({ children }) {
     </div>
   )
 }
-

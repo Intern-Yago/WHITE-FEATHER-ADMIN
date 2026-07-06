@@ -1,14 +1,17 @@
 from flask import Blueprint, jsonify, request
+from src.auth import admin_required
 from src.models.financeiro import Transacao, db
 
 financeiro_bp = Blueprint('financeiro', __name__)
 
 @financeiro_bp.route('/transacoes', methods=['GET'])
+@admin_required
 def get_transacoes():
     transacoes = Transacao.query.order_by(Transacao.data.desc()).all()
     return jsonify([transacao.to_dict() for transacao in transacoes])
 
 @financeiro_bp.route('/transacoes', methods=['POST'])
+@admin_required
 def create_transacao():
     data = request.json
     transacao = Transacao(
@@ -24,11 +27,13 @@ def create_transacao():
     return jsonify(transacao.to_dict()), 201
 
 @financeiro_bp.route('/transacoes/<int:transacao_id>', methods=['GET'])
+@admin_required
 def get_transacao(transacao_id):
     transacao = Transacao.query.get_or_404(transacao_id)
     return jsonify(transacao.to_dict())
 
 @financeiro_bp.route('/transacoes/<int:transacao_id>', methods=['PUT'])
+@admin_required
 def update_transacao(transacao_id):
     transacao = Transacao.query.get_or_404(transacao_id)
     data = request.json
@@ -42,6 +47,7 @@ def update_transacao(transacao_id):
     return jsonify(transacao.to_dict())
 
 @financeiro_bp.route('/transacoes/<int:transacao_id>', methods=['DELETE'])
+@admin_required
 def delete_transacao(transacao_id):
     transacao = Transacao.query.get_or_404(transacao_id)
     db.session.delete(transacao)
@@ -49,6 +55,7 @@ def delete_transacao(transacao_id):
     return '', 204
 
 @financeiro_bp.route('/resumo-financeiro', methods=['GET'])
+@admin_required
 def get_resumo_financeiro():
     receitas = db.session.query(db.func.sum(Transacao.valor)).filter(Transacao.tipo == 'receita').scalar() or 0
     despesas = db.session.query(db.func.sum(Transacao.valor)).filter(Transacao.tipo == 'despesa').scalar() or 0
@@ -75,6 +82,7 @@ def get_resumo_financeiro():
     })
 
 @financeiro_bp.route('/categorias', methods=['GET'])
+@admin_required
 def get_categorias():
     categorias_receita = [
         'Mensalidades',

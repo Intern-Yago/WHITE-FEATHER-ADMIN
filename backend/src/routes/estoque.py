@@ -1,14 +1,18 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required
+from src.auth import admin_required
 from src.models.estoque import Material, MovimentacaoEstoque, db
 
 estoque_bp = Blueprint('estoque', __name__)
 
 @estoque_bp.route('/materiais', methods=['GET'])
+@jwt_required()
 def get_materiais():
     materiais = Material.query.filter_by(ativo=True).order_by(Material.categoria, Material.nome).all()
     return jsonify([material.to_dict() for material in materiais])
 
 @estoque_bp.route('/materiais', methods=['POST'])
+@admin_required
 def create_material():
     data = request.json
     material = Material(
@@ -41,11 +45,13 @@ def create_material():
     return jsonify(material.to_dict()), 201
 
 @estoque_bp.route('/materiais/<int:material_id>', methods=['GET'])
+@jwt_required()
 def get_material(material_id):
     material = Material.query.get_or_404(material_id)
     return jsonify(material.to_dict())
 
 @estoque_bp.route('/materiais/<int:material_id>', methods=['PUT'])
+@admin_required
 def update_material(material_id):
     material = Material.query.get_or_404(material_id)
     data = request.json
@@ -65,6 +71,7 @@ def update_material(material_id):
     return jsonify(material.to_dict())
 
 @estoque_bp.route('/materiais/<int:material_id>', methods=['DELETE'])
+@admin_required
 def delete_material(material_id):
     material = Material.query.get_or_404(material_id)
     material.ativo = False  # Soft delete
@@ -72,6 +79,7 @@ def delete_material(material_id):
     return '', 204
 
 @estoque_bp.route('/materiais/<int:material_id>/movimentar', methods=['POST'])
+@jwt_required()
 def movimentar_estoque(material_id):
     material = Material.query.get_or_404(material_id)
     data = request.json
@@ -107,16 +115,19 @@ def movimentar_estoque(material_id):
     return jsonify(material.to_dict())
 
 @estoque_bp.route('/materiais/<int:material_id>/movimentacoes', methods=['GET'])
+@jwt_required()
 def get_movimentacoes_material(material_id):
     movimentacoes = MovimentacaoEstoque.query.filter_by(material_id=material_id).order_by(MovimentacaoEstoque.data_movimentacao.desc()).all()
     return jsonify([mov.to_dict() for mov in movimentacoes])
 
 @estoque_bp.route('/movimentacoes', methods=['GET'])
+@jwt_required()
 def get_movimentacoes():
     movimentacoes = MovimentacaoEstoque.query.order_by(MovimentacaoEstoque.data_movimentacao.desc()).limit(50).all()
     return jsonify([mov.to_dict() for mov in movimentacoes])
 
 @estoque_bp.route('/resumo-estoque', methods=['GET'])
+@jwt_required()
 def get_resumo_estoque():
     total_materiais = Material.query.filter_by(ativo=True).count()
     materiais_baixo_estoque = Material.query.filter(
@@ -142,6 +153,7 @@ def get_resumo_estoque():
     })
 
 @estoque_bp.route('/categorias-materiais', methods=['GET'])
+@jwt_required()
 def get_categorias_materiais():
     categorias = [
         'Velas',
