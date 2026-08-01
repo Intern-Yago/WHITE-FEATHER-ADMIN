@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Sparkles, CalendarDays, Lock } from 'lucide-react'
 import { apiFetch, setSession } from '@/lib/api'
 
+import { toast } from 'sonner'
+
 export function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -29,17 +31,21 @@ export function Login() {
 
       if (response.ok && data.success) {
         setSession(data.token, data.user)
+        toast.success(`Bem-vindo(a), ${data.user.username}!`)
         navigate('/')
       } else {
         setError(data.error || 'Erro ao realizar login.')
+        toast.error(data.error || 'Erro ao realizar login.')
       }
     } catch (err) {
       console.error(err)
       setError('Erro de conexão com o servidor.')
+      toast.error('Erro de conexão com o servidor.')
     } finally {
       setLoading(false)
     }
   }
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 overflow-hidden">

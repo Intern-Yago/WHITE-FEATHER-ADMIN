@@ -2,25 +2,60 @@ from flask import Blueprint, jsonify, request
 from src.auth import admin_required
 from src.models.financeiro import Transacao, db
 
+from datetime import datetime
+
 financeiro_bp = Blueprint('financeiro', __name__)
 
 @financeiro_bp.route('/transacoes', methods=['GET'])
 @admin_required
 def get_transacoes():
-    transacoes = Transacao.query.order_by(Transacao.data.desc()).all()
+    query = Transacao.query
+    
+    tipo = request.args.get('tipo')
+    if tipo in ('receita', 'despesa'):
+        query = query.filter(Transacao.tipo == tipo)
+
+    categoria = request.args.get('categoria')
+    if categoria:
+        query = query.filter(Transacao.categoria == categoria)
+
+    transacoes = query.order_by(Transacao.data.desc()).all()
     return jsonify([transacao.to_dict() for transacao in transacoes])
 
 @financeiro_bp.route('/transacoes', methods=['POST'])
 @admin_required
 def create_transacao():
-    data = request.json
+    data = request.json or {}
+
+    if not data.get('descricao') or not str(data.get('descricao')).strip():
+        return jsonify({'error': 'Descrição é obrigatória'}), 400
+    if not data.get('tipo') or data.get('tipo') not in ('receita', 'despesa'):
+        return jsonify({'error': 'Tipo deve ser "receita" ou "despesa"'}), 400
+    if not data.get('categoria') or not str(data.get('categoria')).strip():
+        return jsonify({'error': 'Categoria é obrigatória'}), 400
+
+    try:
+        valor = float(data.get('valor', 0))
+        if valor <= 0:
+            return jsonify({'error': 'Valor da transação deve ser maior que zero'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Valor da transação inválido'}), 400
+
+    data_trans = datetime.now()
+    if data.get('data'):
+        try:
+            data_trans = datetime.fromisoformat(data['data'].replace('Z', '+00:00'))
+        except ValueError:
+            pass
+
     transacao = Transacao(
-        descricao=data['descricao'],
-        valor=data['valor'],
+        descricao=str(data['descricao']).strip(),
+        valor=valor,
         tipo=data['tipo'],
-        categoria=data['categoria'],
+        categoria=str(data['categoria']).strip(),
         subcategoria=data.get('subcategoria'),
-        membro_id=data.get('membro_id')
+        membro_id=data.get('membro_id'),
+        data=data_trans
     )
     db.session.add(transacao)
     db.session.commit()
@@ -36,10 +71,23 @@ def get_transacao(transacao_id):
 @admin_required
 def update_transacao(transacao_id):
     transacao = Transacao.query.get_or_404(transacao_id)
-    data = request.json
+    data = request.json or {}
+
+    if 'valor' in data:
+        try:
+            val = float(data['valor'])
+            if val <= 0:
+                return jsonify({'error': 'Valor deve ser maior que zero'}), 400
+            transacao.valor = val
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Valor inválido'}), 400
+
+    if 'tipo' in data:
+        if data['tipo'] not in ('receita', 'despesa'):
+            return jsonify({'error': 'Tipo inválido'}), 400
+        transacao.tipo = data['tipo']
+
     transacao.descricao = data.get('descricao', transacao.descricao)
-    transacao.valor = data.get('valor', transacao.valor)
-    transacao.tipo = data.get('tipo', transacao.tipo)
     transacao.categoria = data.get('categoria', transacao.categoria)
     transacao.subcategoria = data.get('subcategoria', transacao.subcategoria)
     transacao.membro_id = data.get('membro_id', transacao.membro_id)
@@ -53,6 +101,7 @@ def delete_transacao(transacao_id):
     db.session.delete(transacao)
     db.session.commit()
     return '', 204
+
 
 @financeiro_bp.route('/resumo-financeiro', methods=['GET'])
 @admin_required

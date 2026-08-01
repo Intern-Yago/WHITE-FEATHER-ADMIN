@@ -4,8 +4,9 @@ from datetime import datetime, date
 from src.auth import admin_required, is_admin, get_current_user
 from src.models.membro import Membro, PagamentoMensalidade, db
 
-membro_bp = Blueprint('membro', __name__)
+from src.models.financeiro import Transacao
 
+membro_bp = Blueprint('membro', __name__)
 
 def membro_public_dict(membro):
     """Dados de membro visíveis para usuários não-admin: apenas nome e telefone."""
@@ -27,20 +28,29 @@ def get_membros():
 @membro_bp.route('/membros', methods=['POST'])
 @admin_required
 def create_membro():
-    data = request.json
+    data = request.json or {}
+    if not data.get('nome') or not str(data.get('nome')).strip():
+        return jsonify({'error': 'Nome é obrigatório'}), 400
+
+    valor_mensalidade = float(data.get('valor_mensalidade', 0.0) or 0.0)
+    if valor_mensalidade < 0:
+        return jsonify({'error': 'Valor da mensalidade não pode ser negativo'}), 400
 
     # Converter data de nascimento se fornecida
     data_nascimento = None
     if data.get('data_nascimento'):
-        data_nascimento = datetime.strptime(data['data_nascimento'], '%Y-%m-%d').date()
+        try:
+            data_nascimento = datetime.strptime(data['data_nascimento'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Data de nascimento inválida'}), 400
 
     membro = Membro(
-        nome=data['nome'],
+        nome=data['nome'].strip(),
         telefone=data.get('telefone'),
         email=data.get('email'),
         endereco=data.get('endereco'),
         data_nascimento=data_nascimento,
-        valor_mensalidade=data.get('valor_mensalidade', 0.0),
+        valor_mensalidade=valor_mensalidade,
         observacoes=data.get('observacoes')
     )
     db.session.add(membro)
@@ -59,17 +69,25 @@ def get_membro(membro_id):
 @admin_required
 def update_membro(membro_id):
     membro = Membro.query.get_or_404(membro_id)
-    data = request.json
+    data = request.json or {}
+
+    if 'valor_mensalidade' in data:
+        valor_mensalidade = float(data.get('valor_mensalidade', 0.0) or 0.0)
+        if valor_mensalidade < 0:
+            return jsonify({'error': 'Valor da mensalidade não pode ser negativo'}), 400
+        membro.valor_mensalidade = valor_mensalidade
 
     membro.nome = data.get('nome', membro.nome)
     membro.telefone = data.get('telefone', membro.telefone)
     membro.email = data.get('email', membro.email)
     membro.endereco = data.get('endereco', membro.endereco)
-    membro.valor_mensalidade = data.get('valor_mensalidade', membro.valor_mensalidade)
     membro.observacoes = data.get('observacoes', membro.observacoes)
 
     if data.get('data_nascimento'):
-        membro.data_nascimento = datetime.strptime(data['data_nascimento'], '%Y-%m-%d').date()
+        try:
+            membro.data_nascimento = datetime.strptime(data['data_nascimento'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Data de nascimento inválida'}), 400
 
     db.session.commit()
     return jsonify(membro.to_dict())
@@ -102,26 +120,57 @@ def get_pagamentos():
 @membro_bp.route('/pagamentos-mensalidade', methods=['POST'])
 @admin_required
 def create_pagamento():
-    data = request.json
+    data = request.json or {}
+
+    if not data.get('membro_id') or not data.get('mes_referencia') or data.get('valor_pago') is None:
+        return jsonify({'error': 'membro_id, mes_referencia e valor_pago são obrigatórios'}), 400
+
+    try:
+        valor_pago = float(data['valor_pago'])
+        if valor_pago <= 0:
+            return jsonify({'error': 'Valor pago deve ser maior que zero'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Valor pago inválido'}), 400
+
+    membro = Membro.query.get_or_404(data['membro_id'])
 
     # Verificar se já existe pagamento para este membro no mês
     existing = PagamentoMensalidade.query.filter_by(
-        membro_id=data['membro_id'],
+        membro_id=membro.id,
         mes_referencia=data['mes_referencia']
     ).first()
 
     if existing:
         return jsonify({'error': 'Já existe pagamento para este membro neste mês'}), 400
 
-    pagamento = PagamentoMensalidade(
-        membro_id=data['membro_id'],
-        mes_referencia=data['mes_referencia'],
-        valor_pago=data['valor_pago'],
-        observacoes=data.get('observacoes')
-    )
-
+    # Determinar data do pagamento
+    data_pag = datetime.now().date()
     if data.get('data_pagamento'):
-        pagamento.data_pagamento = datetime.strptime(data['data_pagamento'], '%Y-%m-%d').date()
+        try:
+            data_pag = datetime.strptime(data['data_pagamento'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Data de pagamento inválida'}), 400
+
+    # Sincronizar: Criar Transacao de receita financeira correspondente
+    transacao = Transacao(
+        descricao=f"Mensalidade - {membro.nome} ({data['mes_referencia']})",
+        valor=valor_pago,
+        tipo='receita',
+        categoria='Mensalidades',
+        membro_id=membro.id,
+        data=datetime.combine(data_pag, datetime.min.time())
+    )
+    db.session.add(transacao)
+    db.session.flush()  # obter id da transacao
+
+    pagamento = PagamentoMensalidade(
+        membro_id=membro.id,
+        mes_referencia=data['mes_referencia'],
+        valor_pago=valor_pago,
+        data_pagamento=data_pag,
+        observacoes=data.get('observacoes'),
+        transacao_id=transacao.id
+    )
 
     db.session.add(pagamento)
     db.session.commit()
@@ -131,9 +180,15 @@ def create_pagamento():
 @admin_required
 def delete_pagamento(pagamento_id):
     pagamento = PagamentoMensalidade.query.get_or_404(pagamento_id)
+    if pagamento.transacao_id:
+        transacao = Transacao.query.get(pagamento.transacao_id)
+        if transacao:
+            db.session.delete(transacao)
+
     db.session.delete(pagamento)
     db.session.commit()
     return '', 204
+
 
 @membro_bp.route('/membros/inadimplentes', methods=['GET'])
 @admin_required

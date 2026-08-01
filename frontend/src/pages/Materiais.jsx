@@ -11,7 +11,10 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Package, AlertTriangle, DollarSign, Trash2, Edit, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
+import { toast } from 'sonner'
+
 export function Materiais() {
+
   // Membro comum pode ver e movimentar estoque, mas não criar/editar/excluir.
   const admin = isAdmin()
   const [materiais, setMateriais] = useState([])
@@ -103,7 +106,10 @@ export function Materiais() {
         }),
       })
 
+      const resData = await response.json()
+
       if (response.ok) {
+        toast.success(editingMaterial ? 'Material atualizado!' : 'Material cadastrado com sucesso!')
         await fetchMateriais()
         await fetchMovimentacoes()
         setDialogOpen(false)
@@ -113,8 +119,11 @@ export function Materiais() {
           unidade_medida: 'unidade', preco_unitario: '', quantidade_atual: '',
           quantidade_minima: '5', fornecedor: '', local_armazenamento: '', observacoes: ''
         })
+      } else {
+        toast.error(resData.error || 'Erro ao salvar material')
       }
     } catch (error) {
+      toast.error('Erro de conexão ao salvar material')
       console.error('Erro ao salvar material:', error)
     }
   }
@@ -134,7 +143,10 @@ export function Materiais() {
         }),
       })
 
+      const resData = await response.json()
+
       if (response.ok) {
+        toast.success('Movimentação de estoque registrada com sucesso!')
         await fetchMateriais()
         await fetchMovimentacoes()
         setMovimentacaoDialogOpen(false)
@@ -143,10 +155,10 @@ export function Materiais() {
           tipo_movimentacao: '', quantidade: '', motivo: '', observacoes: ''
         })
       } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao movimentar estoque')
+        toast.error(resData.error || 'Erro ao movimentar estoque')
       }
     } catch (error) {
+      toast.error('Erro de conexão ao movimentar estoque')
       console.error('Erro ao movimentar estoque:', error)
     }
   }
@@ -172,13 +184,19 @@ export function Materiais() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este material?')) {
       try {
-        await apiFetch(`/materiais/${id}`, { method: 'DELETE' })
-        await fetchMateriais()
+        const response = await apiFetch(`/materiais/${id}`, { method: 'DELETE' })
+        if (response.ok) {
+          toast.success('Material desativado com sucesso.')
+          await fetchMateriais()
+        } else {
+          toast.error('Erro ao desativar material.')
+        }
       } catch (error) {
-        console.error('Erro ao remover material:', error)
+        toast.error('Erro de conexão ao desativar material.')
       }
     }
   }
+
 
   const totalMateriais = materiais.length
   const materiaisBaixoEstoque = materiais.filter(m => m.estoque_baixo).length

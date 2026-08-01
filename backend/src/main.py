@@ -48,7 +48,7 @@ with app.app_context():
         try:
             db.create_all()
 
-            # Migração leve/idempotente: adicionar colunas novas em `eventos`
+            # Migração leve/idempotente: adicionar colunas novas em `eventos` e `pagamentos_mensalidade`
             # (db.create_all() não altera tabelas já existentes).
             inspector = inspect(db.engine)
             if 'eventos' in inspector.get_table_names():
@@ -61,6 +61,14 @@ with app.app_context():
                     if 'criado_por_id' not in colunas:
                         conn.execute(text(
                             "ALTER TABLE eventos ADD COLUMN criado_por_id INTEGER"
+                        ))
+
+            if 'pagamentos_mensalidade' in inspector.get_table_names():
+                colunas = {c['name'] for c in inspector.get_columns('pagamentos_mensalidade')}
+                if 'transacao_id' not in colunas:
+                    with db.engine.begin() as conn:
+                        conn.execute(text(
+                            "ALTER TABLE pagamentos_mensalidade ADD COLUMN transacao_id INTEGER"
                         ))
 
             # Seed default users

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { Financeiro } from './pages/Financeiro'
@@ -29,7 +30,9 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function App() {
   return (
     <Router>
+      <Toaster richColors position="top-right" closeButton />
       <Layout>
+
         <Routes>
           <Route path="/login" element={<Login />} />
           

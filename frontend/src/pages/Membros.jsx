@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Users, DollarSign, AlertTriangle, Trash2, Edit, CreditCard, Phone } from 'lucide-react'
+import { Plus, Users, DollarSign, AlertTriangle, Trash2, Edit, CreditCard, Phone, Download } from 'lucide-react'
+import { toast } from 'sonner'
+
 
 // Diretório somente-leitura para membros comuns: apenas nome e telefone.
 function MembrosMembro() {
@@ -170,7 +172,10 @@ function MembrosAdmin() {
         }),
       })
 
+      const resData = await response.json()
+
       if (response.ok) {
+        toast.success(editingMembro ? 'Membro atualizado com sucesso!' : 'Membro cadastrado com sucesso!')
         await fetchMembros()
         setDialogOpen(false)
         setEditingMembro(null)
@@ -178,8 +183,11 @@ function MembrosAdmin() {
           nome: '', telefone: '', email: '', endereco: '',
           data_nascimento: '', valor_mensalidade: '', observacoes: ''
         })
+      } else {
+        toast.error(resData.error || 'Erro ao salvar membro')
       }
     } catch (error) {
+      toast.error('Erro de conexão ao salvar membro')
       console.error('Erro ao salvar membro:', error)
     }
   }
@@ -199,7 +207,10 @@ function MembrosAdmin() {
         }),
       })
 
+      const resData = await response.json()
+
       if (response.ok) {
+        toast.success('Pagamento de mensalidade registrado com sucesso!')
         await fetchPagamentos()
         setPagamentoDialogOpen(false)
         setPagamentoData({
@@ -207,10 +218,10 @@ function MembrosAdmin() {
           data_pagamento: '', observacoes: ''
         })
       } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao registrar pagamento')
+        toast.error(resData.error || 'Erro ao registrar pagamento')
       }
     } catch (error) {
+      toast.error('Erro ao registrar pagamento')
       console.error('Erro ao registrar pagamento:', error)
     }
   }
@@ -232,10 +243,15 @@ function MembrosAdmin() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este membro?')) {
       try {
-        await apiFetch(`/membros/${id}`, { method: 'DELETE' })
-        await fetchMembros()
+        const response = await apiFetch(`/membros/${id}`, { method: 'DELETE' })
+        if (response.ok) {
+          toast.success('Membro removido com sucesso.')
+          await fetchMembros()
+        } else {
+          toast.error('Erro ao remover membro.')
+        }
       } catch (error) {
-        console.error('Erro ao remover membro:', error)
+        toast.error('Erro de conexão ao remover membro.')
       }
     }
   }
@@ -243,13 +259,46 @@ function MembrosAdmin() {
   const handleDeletePagamento = async (id) => {
     if (confirm('Tem certeza que deseja excluir este pagamento?')) {
       try {
-        await apiFetch(`/pagamentos-mensalidade/${id}`, { method: 'DELETE' })
-        await fetchPagamentos()
+        const response = await apiFetch(`/pagamentos-mensalidade/${id}`, { method: 'DELETE' })
+        if (response.ok) {
+          toast.success('Pagamento excluído com sucesso.')
+          await fetchPagamentos()
+        } else {
+          toast.error('Erro ao excluir pagamento.')
+        }
       } catch (error) {
-        console.error('Erro ao excluir pagamento:', error)
+        toast.error('Erro de conexão ao excluir pagamento.')
       }
     }
   }
+
+  const exportMembrosCSV = () => {
+    if (membros.length === 0) {
+      toast.info('Nenhum membro para exportar.')
+      return
+    }
+    const headers = ['ID', 'Nome', 'Telefone', 'Email', 'Endereço', 'Data Nascimento', 'Valor Mensalidade (R$)', 'Data Ingresso']
+    const rows = membros.map(m => [
+      m.id,
+      `"${m.nome || ''}"`,
+      `"${m.telefone || ''}"`,
+      `"${m.email || ''}"`,
+      `"${m.endereco || ''}"`,
+      m.data_nascimento || '',
+      m.valor_mensalidade?.toFixed(2) || '0.00',
+      m.data_ingresso || ''
+    ])
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `membros_templo_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Relatório CSV de membros gerado!')
+  }
+
 
   const totalMembros = membros.length
   const receitaEsperada = membros.reduce((sum, m) => sum + m.valor_mensalidade, 0)
@@ -283,12 +332,18 @@ function MembrosAdmin() {
         </div>
         
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={exportMembrosCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+
           <Dialog open={pagamentoDialogOpen} onOpenChange={setPagamentoDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Registrar Pagamento
               </Button>
+
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>

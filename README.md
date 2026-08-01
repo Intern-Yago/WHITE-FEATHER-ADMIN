@@ -33,27 +33,50 @@ Uma aplicação web completa para gerenciar as atividades de um templo umbandist
 
 ## 🚀 Como Executar
 
-### Pré-requisitos
-- Python 3.11+
-- Node.js 20+
-- pnpm
+O Docker é **totalmente opcional**. Você pode rodar a aplicação nativamente no seu computador (sem Docker) usando banco SQLite automático.
 
-### Backend (Flask)
+### ⚡ Opção 1: Execução Sem Docker (Recomendado para Testes Locais)
+
+#### 🔹 No Windows (1 clique):
+Basta dar dois cliques no arquivo [`start-dev.bat`](file:///C:/Users/Yago/projetos/WHITE-FEATHER-ADMIN/start-dev.bat) ou rodar no terminal:
+```cmd
+.\start-dev.bat
+```
+*O script criará o ambiente virtual Python (`venv`), instalará as dependências do Backend e Frontend e abrirá ambos os servidores automaticamente.*
+
+#### 🔹 No Linux / macOS:
+```bash
+chmod +x start-dev.sh
+./start-dev.sh
+```
+
+#### 🔹 Manualmente (Terminal duplo):
+**Backend (Python + Flask + SQLite):**
 ```bash
 cd backend
-source venv/bin/activate
+python -m venv venv
+# No Windows: venv\Scripts\activate | No Linux/Mac: source venv/bin/activate
 pip install -r requirements.txt
 python src/main.py
 ```
-O backend estará disponível em: http://localhost:5000
+*Backend disponível em: http://localhost:5000*
 
-### Frontend (React)
+**Frontend (React + Vite):**
 ```bash
 cd frontend
-pnpm install
-pnpm run dev
+pnpm install # ou npm install
+pnpm dev     # ou npm run dev
 ```
-O frontend estará disponível em: http://localhost:5173
+*Frontend disponível em: http://localhost:5173*
+
+---
+
+### 🐳 Opção 2: Execução Com Docker (Opcional)
+Se você preferir rodar via containers Docker com PostgreSQL:
+```bash
+docker compose up --build
+```
+
 
 ## 📱 Interface
 

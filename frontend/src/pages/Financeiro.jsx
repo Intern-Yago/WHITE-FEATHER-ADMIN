@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Plus, DollarSign, TrendingUp, TrendingDown, Trash2, Edit } from 'lucide-react'
+import { Plus, DollarSign, TrendingUp, TrendingDown, Trash2, Edit, Download } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function Financeiro() {
   const [transacoes, setTransacoes] = useState([])
@@ -71,14 +72,19 @@ export function Financeiro() {
         }),
       })
 
+      const resData = await response.json()
+
       if (response.ok) {
+        toast.success(editingTransacao ? 'Transação salva!' : 'Transação registrada com sucesso!')
         await fetchTransacoes()
         setDialogOpen(false)
         setEditingTransacao(null)
         setFormData({ descricao: '', valor: '', tipo: '', categoria: '', subcategoria: '' })
+      } else {
+        toast.error(resData.error || 'Erro ao salvar transação.')
       }
     } catch (error) {
-      console.error('Erro ao salvar transação:', error)
+      toast.error('Erro ao salvar transação.')
     }
   }
 
@@ -97,13 +103,45 @@ export function Financeiro() {
   const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja excluir esta transação?')) {
       try {
-        await apiFetch(`/transacoes/${id}`, { method: 'DELETE' })
-        await fetchTransacoes()
+        const response = await apiFetch(`/transacoes/${id}`, { method: 'DELETE' })
+        if (response.ok) {
+          toast.success('Transação excluída com sucesso.')
+          await fetchTransacoes()
+        } else {
+          toast.error('Erro ao excluir transação.')
+        }
       } catch (error) {
-        console.error('Erro ao excluir transação:', error)
+        toast.error('Erro de conexão ao excluir transação.')
       }
     }
   }
+
+  const exportCSV = () => {
+    if (transacoes.length === 0) {
+      toast.info('Nenhuma transação para exportar.')
+      return
+    }
+    const headers = ['ID', 'Descrição', 'Tipo', 'Categoria', 'Subcategoria', 'Valor (R$)', 'Data']
+    const rows = transacoes.map(t => [
+      t.id,
+      `"${t.descricao || ''}"`,
+      t.tipo,
+      `"${t.categoria || ''}"`,
+      `"${t.subcategoria || ''}"`,
+      t.valor?.toFixed(2) || '0.00',
+      t.data || ''
+    ])
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `transacoes_templo_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Relatório CSV de transações gerado!')
+  }
+
 
   const totalReceitas = transacoes
     .filter(t => t.tipo === 'receita')
@@ -141,16 +179,23 @@ export function Financeiro() {
           </p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingTransacao(null)
-              setFormData({ descricao: '', valor: '', tipo: '', categoria: '', subcategoria: '' })
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Transação
-            </Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={exportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => {
+                setEditingTransacao(null)
+                setFormData({ descricao: '', valor: '', tipo: '', categoria: '', subcategoria: '' })
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Transação
+              </Button>
+            </DialogTrigger>
+
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -234,7 +279,9 @@ export function Financeiro() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

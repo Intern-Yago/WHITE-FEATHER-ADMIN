@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DollarSign, Package, TrendingUp, AlertTriangle, Users, Calendar, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
+
 
 function DashboardSkeleton() {
   return (
@@ -189,6 +191,20 @@ function AdminDashboard() {
 
   if (loading) return <DashboardSkeleton />
 
+  const barData = [
+    {
+      name: 'Balanço Geral',
+      Receitas: resumoFinanceiro?.receitas || 0,
+      Despesas: resumoFinanceiro?.despesas || 0,
+    }
+  ]
+
+  const pieColors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899', '#6366f1']
+  const receitasPieData = resumoFinanceiro?.receitas_por_categoria?.map(item => ({
+    name: item.categoria,
+    value: item.valor
+  })) || []
+
   return (
     <div className="space-y-6">
       <div>
@@ -304,6 +320,62 @@ function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Gráficos Financeiros */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Balanço Receitas vs Despesas</CardTitle>
+            <CardDescription>Comparativo financeiro total</CardDescription>
+          </CardHeader>
+          <CardContent className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(val) => `R$${val}`} />
+                <Tooltip formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, '']} />
+                <Legend />
+                <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Receitas por Categoria</CardTitle>
+            <CardDescription>Distribuição de entradas</CardDescription>
+          </CardHeader>
+          <CardContent className="h-64">
+            {receitasPieData.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                Nenhuma receita cadastrada
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={receitasPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {receitasPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(val) => [`R$ ${Number(val).toFixed(2)}`, 'Valor']} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -345,6 +417,7 @@ function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader>

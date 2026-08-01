@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -24,6 +25,7 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react'
+
 
 // Helper para obter classes de estilo estáticas do Tailwind
 const getColorClasses = (color) => {
@@ -219,9 +221,10 @@ export function Agenda() {
     const id = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')
     
     if (allCategories.some(c => c.id === id)) {
-      alert('Esta categoria já existe!')
+      toast.warning('Esta categoria já existe!')
       return
     }
+
 
     const colorPalette = ['amber', 'purple', 'violet', 'fuchsia', 'teal', 'orange']
     const color = colorPalette[customCategories.length % colorPalette.length]
@@ -449,16 +452,21 @@ export function Agenda() {
 
       if (response.ok) {
         setIsCreateOpen(false)
-        // Membro criando novo evento: vai para aprovação do admin.
         if (!admin && !selectedEvent) {
-          alert('Compromisso enviado para aprovação da administração.')
+          toast.info('Compromisso enviado para aprovação da administração.')
+        } else {
+          toast.success(selectedEvent ? 'Evento atualizado!' : 'Evento criado com sucesso!')
         }
         fetchEvents()
+      } else {
+        toast.error('Erro ao salvar evento.')
       }
     } catch (error) {
+      toast.error('Erro de conexão ao salvar evento.')
       console.error('Erro ao salvar evento:', error)
     }
   }
+
 
   // Aprovar / recusar evento pendente (somente admin).
   const handleAprovar = async () => {

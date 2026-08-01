@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { getUser, clearSession } from '@/lib/api'
+import { getUser, clearSession, apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 import {
   DollarSign,
   Package,
@@ -13,7 +17,8 @@ import {
   Calendar,
   LogOut,
   Wallet,
-  User as UserIcon
+  User as UserIcon,
+  KeyRound
 } from 'lucide-react'
 
 // `adminOnly`: visível só para admin. `memberOnly`: visível só para membro comum.
@@ -55,6 +60,11 @@ const menuItems = [
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [user, setUser] = useState(null)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -70,7 +80,46 @@ export function Sidebar() {
 
   const handleLogout = () => {
     clearSession()
+    toast.info('Sessão encerrada.')
     navigate('/login')
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem.')
+      return
+    }
+    if (newPassword.length < 6) {
+      toast.error('A nova senha deve ter no mínimo 6 caracteres.')
+      return
+    }
+
+    setPasswordLoading(true)
+    try {
+      const response = await apiFetch('/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword
+        })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        toast.success('Senha alterada com sucesso!')
+        setPasswordDialogOpen(false)
+        setOldPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        toast.error(data.error || 'Erro ao alterar senha.')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Erro de conexão.')
+    } finally {
+      setPasswordLoading(false)
+    }
   }
 
   // Filtrar itens com base no papel do usuário.
@@ -147,8 +196,8 @@ export function Sidebar() {
 
           {/* User profile and logout area at the bottom */}
           {user && (
-            <div className="p-4 border-t border-sidebar-border space-y-3">
-              <div className="flex items-center gap-2.5 px-2">
+            <div className="p-4 border-t border-sidebar-border space-y-2">
+              <div className="flex items-center gap-2.5 px-2 mb-2">
                 <div className="p-1.5 bg-sidebar-accent rounded-full text-sidebar-accent-foreground">
                   <UserIcon className="h-4 w-4" />
                 </div>
@@ -162,6 +211,68 @@ export function Sidebar() {
                 </div>
               </div>
               
+              <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-xs text-muted-foreground hover:text-sidebar-foreground"
+                    size="sm"
+                  >
+                    <KeyRound className="h-3.5 w-3.5 mr-2" />
+                    Alterar Senha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Alterar Senha</DialogTitle>
+                    <DialogDescription>
+                      Digite sua senha atual e escolha uma nova senha segura.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <div>
+                      <Label htmlFor="old_password">Senha Atual</Label>
+                      <Input
+                        id="old_password"
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_password">Nova Senha</Label>
+                      <Input
+                        id="new_password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Mínimo de 6 caracteres"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirm_password">Confirmar Nova Senha</Label>
+                      <Input
+                        id="confirm_password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button type="button" variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={passwordLoading}>
+                        {passwordLoading ? 'Salvando...' : 'Atualizar Senha'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
               <Button 
                 variant="ghost" 
                 onClick={handleLogout}
@@ -185,3 +296,4 @@ export function Sidebar() {
     </>
   )
 }
+
