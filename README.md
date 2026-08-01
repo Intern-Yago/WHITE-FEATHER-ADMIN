@@ -168,9 +168,12 @@ O sistema já vem com categorias específicas para templos umbandistas:
 
 Esta aplicação foi desenvolvida especificamente para atender às necessidades de gestão de templos umbandistas, com funcionalidades adaptadas para o contexto religioso e administrativo.
 
-Para dúvidas ou sugestões de melhorias, entre em contato através dos canais de suporte disponíveis.
+## 📜 Licença
+
+Este projeto está sob a licença [MIT](file:///C:/Users/Yago/projetos/WHITE-FEATHER-ADMIN/LICENSE). Consulte o arquivo `LICENSE` para mais detalhes.
 
 ---
 
 **Desenvolvido com ❤️ para a comunidade umbandista**
+
 

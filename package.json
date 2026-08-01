@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Sistema de Gestão para Templo Umbandista",
+  "license": "MIT",
+
   "scripts": {
     "dev:backend": "cd backend && python src/main.py",
     "dev:frontend": "cd frontend && pnpm dev",
